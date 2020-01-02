@@ -10,7 +10,7 @@
 #   can download a single doujin
 #   or multiple doujins from a search query / csv
 
-    
+
 #Packages
 import sys
 import os
@@ -285,7 +285,7 @@ elif( sys.argv[1:][0] == "tagcsv" ):
     print()
 
     stop_num = int(sys.argv[1:][1])
-    tags_csv_file_path = os.path.join(file_directory, "csv/numbers.csv")
+    tags_csv_file_path = os.path.join(file_directory, "csv/tags.csv")
     search_url = get_search_url(tags_csv_file_path)
     numbers = get_numbers_from_search(search_url, stop_num)
 
