@@ -18,6 +18,8 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 
+from fake_useragent import UserAgent
+
 print("All packages initialized")
 print()
 
@@ -34,6 +36,17 @@ archives_folder_absolute_path = os.path.join(file_directory_absolute_path, "arch
 #Change working directory
 os.chdir(file_directory_absolute_path)
 
+#Useragent to avoid error 403
+ua = UserAgent()
+
+def create_headers(ua = ua):
+    random_user_agent = ua.random
+    headers = {"User-Agent": random_user_agent}
+
+    print("Generated Header: \n{0}".format(headers))
+
+    return headers
+
 #download_image_from_url():
 #   file_name - String representing what to call the downloaded file
 #   web_url - String representing URL to image to download
@@ -41,7 +54,7 @@ os.chdir(file_directory_absolute_path)
 #Method name is self-explanatory
 def download_image_from_url(file_name, web_url, download_dir):
 
-    response = requests.get(web_url, stream=True)
+    response = requests.get(web_url, headers=create_headers(), stream=True)
     if( response.status_code == 200 ):
         with open( os.path.join(download_dir, file_name), 'wb' ) as out_file:
             out_file.write(response.content)
@@ -72,7 +85,7 @@ def download_single_doujin(id_number, archives_folder_absolute_path = archives_f
     url_base = "https://nhentai.net/g/"
     url = url_base + str(id_number)
 
-    response = requests.get(url)
+    response = requests.get(url, headers=create_headers(), stream=True)
 
     html_soup = BeautifulSoup(response.text, "html.parser")
 
@@ -222,7 +235,7 @@ def get_numbers_from_search(search_url, stop_num):
         #If it reaches this point, it should look to the next page
         page_num += 1
 
-        response = requests.get(search_url + "&page={0}".format(page_num), stream=True)
+        response = requests.get(search_url + "&page={0}".format(page_num), headers=create_headers, stream=True)
         html_soup = BeautifulSoup(response.text, "html.parser")
 
         #Shouldn't need response after this point
