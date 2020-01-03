@@ -1,4 +1,4 @@
-#doujin_dl.py
+#DOUJIN_DL.py
 
 #1/2/2020
 
@@ -14,7 +14,6 @@
 #Packages
 import sys
 import os
-import shutil
 import requests
 from bs4 import BeautifulSoup
 import csv
@@ -23,13 +22,17 @@ print("All packages initialized")
 print()
 
 #Get the directory which the file runs from
-file_directory, filename = os.path.split(os.path.abspath(__file__))
+file_directory_absolute_path, filename = os.path.split(os.path.abspath(__file__))
 
 #Get the folder where files are downloaded to
-download_folder = os.path.join(file_directory, "downloads")
+downloads_folder_absolute_path = os.path.join(file_directory_absolute_path, "downloads")
+
+#Gets the absolute path of the folder with download archives
+#Avoids Duplicates
+archives_folder_absolute_path = os.path.join(file_directory_absolute_path, "archives")
 
 #Change working directory
-os.chdir(file_directory)
+os.chdir(file_directory_absolute_path)
 
 #download_image_from_url():
 #   file_name - String representing what to call the downloaded file
@@ -39,8 +42,12 @@ os.chdir(file_directory)
 def download_image_from_url(file_name, web_url, download_dir):
 
     response = requests.get(web_url, stream=True)
-    with open( os.path.join(download_dir, file_name), 'wb' ) as out_file:
-        shutil.copyfileobj(response.raw, out_file)
+    if( response.status_code == 200 ):
+        with open( os.path.join(download_dir, file_name), 'wb' ) as out_file:
+            out_file.write(response.content)
+    else:
+        print("Error in downloading image {0}".format(file_name))
+        print("Exit Status: {0}".format(response.status_code))
 
     #cleanup
     del response
@@ -49,26 +56,44 @@ def download_image_from_url(file_name, web_url, download_dir):
 #   six_digit_number - int representing where one can find the art of their liking
 #Purpose of method is to download a single doujin from a six_digit_number
 #Calls the download_image_from_url method to accomplish this task
-def download_single_doujin(number, download_folder = download_folder):
+def download_single_doujin(id_number, archives_folder_absolute_path = archives_folder_absolute_path, downloads_folder_absolute_path = downloads_folder_absolute_path):
 
-    #Check to see if number is in the download list
-    with open("download_archive.txt", "r") as download_archive:
-        if( str(number) in download_archive.read() ):
-            print("{0} is already in the download archive, canceling".format(number))
+    #Check to see if the id number is in the download list
+    with open( os.path.join(archives_folder_absolute_path, "id_number_download_archive.txt") , "r") as id_number_download_archive_file:
+        if( str(id_number) in id_number_download_archive_file.read() ):
+            print("{0} is already in the id number download archive, canceling".format(id_number))
+            print()
 
             return
         else:
-            print("{0} is not in download archive, proceeding with download".format(number))
+            print("{0} is not in the id number download archive, proceeding".format(id_number))
+            print()
 
     url_base = "https://nhentai.net/g/"
-    url = url_base + str(number)
-
-    print("Proceeding to download: {0}".format(number))
-    print()
+    url = url_base + str(id_number)
 
     response = requests.get(url)
 
     html_soup = BeautifulSoup(response.text, "html.parser")
+
+    #Check to see if the title of the doujin is the the title download archive (Avoids majority of duplicates from multiple translators)
+    doujin_title = html_soup.find("h1").getText()
+
+    print("Title of the doujin is: {0}".format(doujin_title))
+    print()
+
+    with open( os.path.join(archives_folder_absolute_path, "title_download_archive.txt"), "r" ) as title_download_archive_file:
+        if( str(doujin_title) in title_download_archive_file.read() ):
+            print("{0} is already in the title download archive, canceling".format(doujin_title))
+            print()
+
+            return
+        else:
+            print("{0} is not in the title download archive, proceeding".format(doujin_title))
+            print()
+
+    print("Proceeding to download: {0}".format(id_number))
+    print()
 
     try:
 
@@ -97,38 +122,49 @@ def download_single_doujin(number, download_folder = download_folder):
 
     except AttributeError as e:
         print("Nothing found under number")
+        print()
         return
 
     #Checks to see if any images were found
     if( not ( len(modified_urls) == 0 ) ):
 
         #Create directory for images to be downloaded
-        new_directory = os.path.join(download_folder, str(number))
+        new_directory = os.path.join(downloads_folder_absolute_path, str(doujin_title))
         if( not os.path.exists( new_directory ) ):
             os.makedirs( new_directory )
         else:
             print("Directory exists already")
+            print()
 
     else:
         print("Nothing found")
+        print()
         return
 
     #Start to download the images
-    download_dir = os.path.join(download_folder, str(number))
+    download_dir = os.path.join(downloads_folder_absolute_path, str(doujin_title))
 
     for index, url in enumerate(modified_urls):
 
         download_image_from_url(str(index) + ".jpg", url, download_dir)
 
-        print("{0} images downloaded".format(index + 1))
+        print("{0} images processed".format(index + 1))
+        print()
 
     print("All images downloaded")
     print()
 
     #When the entire process finishes without fail, then adds it to the download_list
-    with open("download_archive.txt", "a") as download_archive:
-        download_archive.write(str(number) + "\n")
-        print("Recorded {0} in download archive".format(number))
+    with open( os.path.join(archives_folder_absolute_path, "id_number_download_archive.txt") , "a") as id_number_download_archive_file:
+        id_number_download_archive_file.write( str(id_number) + "\n" )
+        print("Recorded {0} in id number download archive".format(id_number))
+        print()
+
+    #Also add the doujin title to the title_download_archive
+    with open( os.path.join(archives_folder_absolute_path, "title_download_archive.txt"), "a" ) as title_download_archive_file:
+        title_download_archive_file.write( str(doujin_title) + "\n" )
+        print("Recorded {0} in the title download archive".format(doujin_title))
+        print()
 
 #get_search_url():
 #   tags_csv - csv file containing tags to exclude and include
@@ -273,7 +309,7 @@ if( sys.argv[1:][0] == "numcsv" ):
     print("Downloading doujins from number csv")
     print()
 
-    numbers_csv_file_path = os.path.join(file_directory, "csv/numbers.csv")
+    numbers_csv_file_path = os.path.join(file_directory_absolute_path, "csv/numbers.csv")
 
     stop_num = int(sys.argv[1:][1])
     numbers = get_numbers_from_csv_file(numbers_csv_file_path, stop_num)
@@ -285,7 +321,7 @@ elif( sys.argv[1:][0] == "tagcsv" ):
     print()
 
     stop_num = int(sys.argv[1:][1])
-    tags_csv_file_path = os.path.join(file_directory, "csv/tags.csv")
+    tags_csv_file_path = os.path.join(file_directory_absolute_path, "csv/tags.csv")
     search_url = get_search_url(tags_csv_file_path)
     numbers = get_numbers_from_search(search_url, stop_num)
 
