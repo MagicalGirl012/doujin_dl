@@ -1,6 +1,6 @@
 doujin_dl.py
 
-1/2/2020
+2/20/2020
 
 Author: MagicalGirl012
         https://github.com/MagicalGirl012
