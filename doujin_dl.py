@@ -1,6 +1,10 @@
 #DOUJIN_DL.py
 
-#1/2/2020
+#2/20/2020
+
+#Figured out reason behind situational 403 forbidden response
+#Was b/c I assumed all images were of type .jpg
+#Although rarer, there were files of .png
 
 #Author: MagicalGirl012
 #        https://github.com/MagicalGirl012
@@ -39,6 +43,10 @@ os.chdir(file_directory_absolute_path)
 #Useragent to avoid error 403
 ua = UserAgent()
 
+#create_headers()
+#   Not necessary in the case of downloading from nhentai.net
+#   However, it is still decent practice since some other sites may require this
+
 def create_headers(ua = ua):
     random_user_agent = ua.random
     headers = {"User-Agent": random_user_agent}
@@ -54,6 +62,8 @@ def create_headers(ua = ua):
 #Method name is self-explanatory
 def download_image_from_url(file_name, web_url, download_dir):
 
+    #This line seems to work individually in terminal, but is inconsistent when downloading in the program
+    #Don't quite understand why exactly this happens.
     response = requests.get(web_url, headers=create_headers(), stream=True)
     if( response.status_code == 200 ):
         with open( os.path.join(download_dir, file_name), 'wb' ) as out_file:
@@ -88,6 +98,9 @@ def download_single_doujin(id_number, archives_folder_absolute_path = archives_f
     response = requests.get(url, headers=create_headers(), stream=True)
 
     html_soup = BeautifulSoup(response.text, "html.parser")
+
+    #Debugging - See if request got an error
+    #print(html_soup)
 
     #Check to see if the title of the doujin is the the title download archive (Avoids majority of duplicates from multiple translators)
     doujin_title = html_soup.find("h1").getText()
@@ -128,14 +141,21 @@ def download_single_doujin(id_number, archives_folder_absolute_path = archives_f
 
         #Modify url to get non thumbnail image.
         modified_urls = []
+
         for url in urls_to_keep:
+
             modified_url = url.replace("//t.", "//i.")
+
             modified_url = modified_url.replace("t.jpg", ".jpg")
+            modified_url = modified_url.replace("t.png", ".png") #ALSO CHECK FOR .PNG
+
             modified_urls.append(modified_url)
 
     except AttributeError as e:
         print("Nothing found under number")
-        print()
+        return
+    except Exception as e: #For all other errors
+        print(e)
         return
 
     #Checks to see if any images were found
@@ -156,6 +176,13 @@ def download_single_doujin(id_number, archives_folder_absolute_path = archives_f
 
     #Start to download the images
     download_dir = os.path.join(downloads_folder_absolute_path, str(doujin_title))
+
+    #print(modified_urls)
+
+    #If there is a 't' in the number component before the jpg, will ruin the entire process
+    #This was the cause for the error 403 response
+    #The problems lies w/ the way the program analyzes the html, but I am too lazy to find an elegant solution
+
 
     for index, url in enumerate(modified_urls):
 
